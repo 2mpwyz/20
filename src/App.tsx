@@ -38,6 +38,7 @@ import MilestoneVerification from './pages/MilestoneVerification';
 import ProfessionalDirectory from './pages/ProfessionalDirectory';
 import Supplies from './pages/Supplies';
 import SystemStatus from './pages/SystemStatus';
+import ProjectsManagement from './pages/ProjectsManagement';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -190,7 +191,8 @@ function App() {
           }
         />
         <Route path="/portfolio/:creatorId" element={<ViewCreatorPortfolio />} />
-        <Route path="/projects" element={<Projects />} />
+        {/* DEPRECATED: Old Projects page - kept for reference but not used. The new Projects Management page will replace this. */}
+        {/* <Route path="/projects" element={<Projects />} /> */}
         {/* Membership routes - creator and member */}
         <Route
           path="/creators-membership"
@@ -281,32 +283,32 @@ function App() {
           }
         />
 
-        {/* Professional Network & Directory */}
-        <Route
+        {/* Professional Network & Directory - HIDDEN FROM NAV (but route available for future use) */}
+        {/* <Route
           path="/directory"
           element={
             <ContractorProtectedRoute>
               <ProfessionalDirectory />
             </ContractorProtectedRoute>
           }
-        />
+        /> */}
 
-        {/* Supplies Marketplace */}
-        <Route
+        {/* Supplies Marketplace - HIDDEN FROM NAV (but route available for future use) */}
+        {/* <Route
           path="/supplies"
           element={
             <ProtectedRoute>
               <Supplies />
             </ProtectedRoute>
           }
-        />
+        /> */}
 
-        {/* Projects Gallery (uses Media page) */}
+        {/* Projects Management - Completed and Ongoing Projects */}
         <Route
           path="/projects"
           element={
             <ContractorProtectedRoute>
-              <Media />
+              <ProjectsManagement />
             </ContractorProtectedRoute>
           }
         />
