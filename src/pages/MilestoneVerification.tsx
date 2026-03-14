@@ -49,7 +49,6 @@ export default function MilestoneVerification() {
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
   const [verifications, setVerifications] = useState<FieldVerification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [showUploadForm, setShowUploadForm] = useState(false);
 
   // Mock data for demo
@@ -157,12 +156,6 @@ export default function MilestoneVerification() {
     if (!selectedMilestone || !contract) return;
 
     try {
-      setUploadProgress(30);
-
-      // Simulate file upload
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setUploadProgress(60);
-
       // Calculate distance from contract site
       const distance = calculateGPSDistance(
         contract.site_location.latitude,
@@ -172,8 +165,6 @@ export default function MilestoneVerification() {
       );
 
       const isValidLocation = distance < 100; // Must be within 100m of site
-
-      setUploadProgress(90);
 
       // Create verification record
       const newVerification: FieldVerification = {
@@ -201,17 +192,14 @@ export default function MilestoneVerification() {
         );
         setMilestones(updatedMilestones);
 
-        // Show success toast
+        // Show success message
         alert('✅ Milestone Verified!\nInvoice auto-generated in Zoho Books.\nPayment request sent.');
       } else {
         alert('❌ Photo rejected.\n' + (newVerification.rejection_reason || 'Please upload from contract site.'));
       }
 
-      setUploadProgress(100);
-      setTimeout(() => {
-        setShowUploadForm(false);
-        setUploadProgress(0);
-      }, 1000);
+      // Close form immediately without spinner
+      setShowUploadForm(false);
     } catch (error) {
       alert('Upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
@@ -391,7 +379,6 @@ export default function MilestoneVerification() {
                       <PhotoLockUploadForm
                         onSubmit={handlePhotoUpload}
                         onCancel={() => setShowUploadForm(false)}
-                        uploadProgress={uploadProgress}
                       />
                     )}
                   </div>
@@ -432,17 +419,14 @@ export default function MilestoneVerification() {
 function PhotoLockUploadForm({
   onSubmit,
   onCancel,
-  uploadProgress,
 }: {
   onSubmit: (file: File, gpsCoords: { latitude: number; longitude: number }) => void;
   onCancel: () => void;
-  uploadProgress: number;
 }) {
   const { user } = useAuth();
   const { loading: gpsLoading, error: gpsError, coordinates, getCurrentLocation } = useGPS();
   const [file, setFile] = useState<File | null>(null);
   const [gpsCoords, setGpsCoords] = useState({ latitude: 0.3476, longitude: 32.5825 });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleGetLocation = async () => {
@@ -464,7 +448,6 @@ function PhotoLockUploadForm({
       return;
     }
 
-    setIsSubmitting(true);
     setLocalError(null);
 
     try {
@@ -499,8 +482,6 @@ function PhotoLockUploadForm({
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Upload failed';
       setLocalError(errorMsg);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -527,7 +508,6 @@ function PhotoLockUploadForm({
               onChange={(e) => setFile(e.target.files?.[0] || null)}
               className="hidden"
               id="photo-input"
-              disabled={isSubmitting}
             />
             <label htmlFor="photo-input" className="cursor-pointer">
               <Camera className="w-8 h-8 text-blue-500 mx-auto mb-2" />
@@ -549,7 +529,6 @@ function PhotoLockUploadForm({
               onChange={(e) => setGpsCoords({ ...gpsCoords, latitude: parseFloat(e.target.value) })}
               step="0.0001"
               className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={isSubmitting}
             />
             <input
               type="number"
@@ -558,12 +537,11 @@ function PhotoLockUploadForm({
               onChange={(e) => setGpsCoords({ ...gpsCoords, longitude: parseFloat(e.target.value) })}
               step="0.0001"
               className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={isSubmitting}
             />
           </div>
           <button
             onClick={handleGetLocation}
-            disabled={gpsLoading || isSubmitting}
+            disabled={gpsLoading}
             className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {gpsLoading ? (
@@ -588,24 +566,16 @@ function PhotoLockUploadForm({
         <div className="flex gap-3 pt-4">
           <button
             onClick={onCancel}
-            disabled={isSubmitting}
-            className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 transition"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!file || isSubmitting || gpsCoords.latitude === 0}
-            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            disabled={!file || gpsCoords.latitude === 0}
+            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition disabled:bg-slate-400 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? (
-              <>
-                <Loader className="w-4 h-4 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              'Verify & Upload'
-            )}
+            Verify & Upload
           </button>
         </div>
       </div>

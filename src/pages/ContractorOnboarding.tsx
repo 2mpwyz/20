@@ -284,14 +284,7 @@ export default function ContractorOnboarding() {
               disabled={loading}
               className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? (
-                <>
-                  <Loader className="w-5 h-5 animate-spin" />
-                  Saving Profile...
-                </>
-              ) : (
-                'Create Profile'
-              )}
+              Create Profile
             </button>
           </form>
         </div>
