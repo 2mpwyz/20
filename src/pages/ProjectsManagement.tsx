@@ -3,10 +3,11 @@ import { useAuth } from '../context/AuthContext';
 import { useProjectsManagement, OngoingProject, CompletedProject } from '../hooks/useProjectsManagement';
 import {
   Clock, CheckCircle, AlertCircle, Loader, MessageCircle, TrendingUp,
-  Calendar, DollarSign, User, Trophy, Zap
+  Calendar, DollarSign, User, Trophy, Zap, Film
 } from 'lucide-react';
 import ProjectMilestoneVideoUpload from '../components/ProjectMilestoneVideoUpload';
 import ProjectTeamChat from '../components/ProjectTeamChat';
+import MilestoneProofOfWorkModal from '../components/MilestoneProofOfWorkModal';
 
 export default function ProjectsManagement() {
   const { user } = useAuth();
@@ -15,8 +16,15 @@ export default function ProjectsManagement() {
   const [selectedProject, setSelectedProject] = useState<OngoingProject | CompletedProject | null>(null);
   const [showMilestoneDetails, setShowMilestoneDetails] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showProofOfWorkModal, setShowProofOfWorkModal] = useState(false);
   const [chatContractId, setChatContractId] = useState<string>('');
   const [chatContractNumber, setChatContractNumber] = useState<string>('');
+  const [selectedMilestoneForProof, setSelectedMilestoneForProof] = useState<{
+    contractId: string;
+    milestoneId: string;
+    milestoneNumber: number;
+    milestoneName: string;
+  } | null>(null);
 
   if (!user) {
     return <div className="min-h-screen flex items-center justify-center text-slate-600">Please sign in</div>;
@@ -169,8 +177,13 @@ export default function ProjectsManagement() {
                           key={milestone.id}
                           className="p-4 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition cursor-pointer"
                           onClick={() => {
-                            setSelectedProject(project);
-                            setShowMilestoneDetails(true);
+                            setSelectedMilestoneForProof({
+                              contractId: project.id,
+                              milestoneId: milestone.id,
+                              milestoneNumber: milestone.milestone_number,
+                              milestoneName: milestone.milestone_name,
+                            });
+                            setShowProofOfWorkModal(true);
                           }}
                         >
                           <div className="flex items-start justify-between">
@@ -196,14 +209,39 @@ export default function ProjectsManagement() {
                                 <span>{formatCurrency(milestone.amount_ugx, milestone.currency_code)}</span>
                                 <span>Due: {formatDate(milestone.due_date)}</span>
                               </div>
+
+                              {/* Show video count if any */}
+                              {milestone.videos && milestone.videos.length > 0 && (
+                                <div className="mt-3 flex items-center gap-1 text-xs text-blue-600">
+                                  <Film className="w-4 h-4" />
+                                  <span>{milestone.videos.length} video{milestone.videos.length !== 1 ? 's' : ''} attached</span>
+                                </div>
+                              )}
                             </div>
-                            {milestone.status === 'completed' ? (
-                              <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
-                            ) : milestone.status === 'in_progress' ? (
-                              <Clock className="w-6 h-6 text-blue-600 flex-shrink-0" />
-                            ) : (
-                              <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0" />
-                            )}
+                            <div className="flex flex-col items-end gap-2">
+                              {milestone.status === 'completed' ? (
+                                <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+                              ) : milestone.status === 'in_progress' ? (
+                                <Clock className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                              ) : (
+                                <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0" />
+                              )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedMilestoneForProof({
+                                    contractId: project.id,
+                                    milestoneId: milestone.id,
+                                    milestoneNumber: milestone.milestone_number,
+                                    milestoneName: milestone.milestone_name,
+                                  });
+                                  setShowProofOfWorkModal(true);
+                                }}
+                                className="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition whitespace-nowrap"
+                              >
+                                Upload Proof
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -356,6 +394,25 @@ export default function ProjectsManagement() {
             contractId={chatContractId}
             contractNumber={chatContractNumber}
             onClose={() => setShowChat(false)}
+          />
+        )}
+
+        {/* Proof of Work Modal */}
+        {showProofOfWorkModal && selectedMilestoneForProof && (
+          <MilestoneProofOfWorkModal
+            contractId={selectedMilestoneForProof.contractId}
+            milestoneId={selectedMilestoneForProof.milestoneId}
+            milestoneNumber={selectedMilestoneForProof.milestoneNumber}
+            milestoneName={selectedMilestoneForProof.milestoneName}
+            userId={user?.id || ''}
+            userName={user?.name || 'User'}
+            onSuccess={() => {
+              setShowProofOfWorkModal(false);
+            }}
+            onClose={() => {
+              setShowProofOfWorkModal(false);
+              setSelectedMilestoneForProof(null);
+            }}
           />
         )}
       </div>

@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Camera, CheckCircle, Clock, MapPin, FileCheck, AlertTriangle } from 'lucide-react';
+import { AlertCircle, Camera, CheckCircle, Clock, MapPin, FileCheck, AlertTriangle, Loader } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useGPS } from '../hooks/useGPS';
+import { uploadToB2 } from '../lib/b2Upload';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 interface Milestone {
   id: string;
@@ -434,27 +438,70 @@ function PhotoLockUploadForm({
   onCancel: () => void;
   uploadProgress: number;
 }) {
+  const { user } = useAuth();
+  const { loading: gpsLoading, error: gpsError, coordinates, getCurrentLocation } = useGPS();
   const [file, setFile] = useState<File | null>(null);
   const [gpsCoords, setGpsCoords] = useState({ latitude: 0.3476, longitude: 32.5825 });
-  const [useDeviceLocation, setUseDeviceLocation] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const handleGetLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        setGpsCoords({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
+  const handleGetLocation = async () => {
+    const coords = await getCurrentLocation();
+    if (coords) {
+      setGpsCoords({
+        latitude: coords.latitude,
+        longitude: coords.longitude,
       });
+      setLocalError(null);
+    } else if (gpsError) {
+      setLocalError(gpsError.message);
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!file) {
-      alert('Please select a file');
+      setLocalError('Please select a file');
       return;
     }
-    onSubmit(file, gpsCoords);
+
+    setIsSubmitting(true);
+    setLocalError(null);
+
+    try {
+      // Upload file to B2
+      const { publicUrl, error: uploadError } = await uploadToB2(
+        file,
+        `milestone-verification/${user?.id}`
+      );
+
+      if (uploadError) throw new Error(uploadError);
+
+      // Save verification record to database
+      const { error: dbError } = await supabase
+        .from('field_verification')
+        .insert([
+          {
+            task_name: `Photo Evidence - ${new Date().toLocaleDateString()}`,
+            photo_url: publicUrl,
+            photo_upload_timestamp: new Date().toISOString(),
+            gps_latitude: gpsCoords.latitude,
+            gps_longitude: gpsCoords.longitude,
+            gps_accuracy_meters: 10,
+            verification_status: 'pending',
+          },
+        ]);
+
+      if (dbError) throw new Error(dbError.message);
+
+      // Success - submit the form
+      onSubmit(file, gpsCoords);
+      setFile(null);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Upload failed';
+      setLocalError(errorMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -462,6 +509,14 @@ function PhotoLockUploadForm({
       <h5 className="text-lg font-semibold text-slate-900 mb-4">Upload Photo Proof</h5>
 
       <div className="space-y-4">
+        {/* Error Messages */}
+        {(localError || gpsError) && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">{localError || gpsError?.message}</p>
+          </div>
+        )}
+
         {/* File Upload */}
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2">Photo File</label>
@@ -472,6 +527,7 @@ function PhotoLockUploadForm({
               onChange={(e) => setFile(e.target.files?.[0] || null)}
               className="hidden"
               id="photo-input"
+              disabled={isSubmitting}
             />
             <label htmlFor="photo-input" className="cursor-pointer">
               <Camera className="w-8 h-8 text-blue-500 mx-auto mb-2" />
@@ -484,15 +540,16 @@ function PhotoLockUploadForm({
 
         {/* GPS Coordinates */}
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">GPS Location</label>
-          <div className="flex gap-2 mb-2">
+          <label className="block text-sm font-semibold text-slate-700 mb-3">GPS Location</label>
+          <div className="flex gap-2 mb-3">
             <input
               type="number"
               placeholder="Latitude"
               value={gpsCoords.latitude}
               onChange={(e) => setGpsCoords({ ...gpsCoords, latitude: parseFloat(e.target.value) })}
               step="0.0001"
-              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg"
+              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isSubmitting}
             />
             <input
               type="number"
@@ -500,44 +557,55 @@ function PhotoLockUploadForm({
               value={gpsCoords.longitude}
               onChange={(e) => setGpsCoords({ ...gpsCoords, longitude: parseFloat(e.target.value) })}
               step="0.0001"
-              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg"
+              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isSubmitting}
             />
           </div>
           <button
             onClick={handleGetLocation}
-            className="text-sm text-blue-600 hover:text-blue-700 font-semibold"
+            disabled={gpsLoading || isSubmitting}
+            className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            📍 Use Current Location
+            {gpsLoading ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                Getting location...
+              </>
+            ) : (
+              <>
+                📍 Get Current Location
+              </>
+            )}
           </button>
+          {coordinates && (
+            <p className="text-xs text-green-600 mt-2">
+              ✓ Location captured - Accuracy: {Math.round(coordinates.accuracy)}m
+            </p>
+          )}
         </div>
-
-        {/* Progress Bar */}
-        {uploadProgress > 0 && uploadProgress < 100 && (
-          <div>
-            <div className="w-full bg-slate-200 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all"
-                style={{ width: `${uploadProgress}%` }}
-              />
-            </div>
-            <p className="text-sm text-slate-600 mt-2">Uploading... {uploadProgress}%</p>
-          </div>
-        )}
 
         {/* Actions */}
         <div className="flex gap-3 pt-4">
           <button
             onClick={onCancel}
-            className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 transition"
+            disabled={isSubmitting}
+            className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!file || uploadProgress > 0}
-            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition disabled:bg-slate-400"
+            disabled={!file || isSubmitting || gpsCoords.latitude === 0}
+            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {uploadProgress > 0 ? 'Uploading...' : 'Verify & Upload'}
+            {isSubmitting ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              'Verify & Upload'
+            )}
           </button>
         </div>
       </div>
