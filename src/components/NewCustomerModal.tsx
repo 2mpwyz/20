@@ -104,10 +104,9 @@ export default function NewCustomerModal({
             <button
               type="submit"
               disabled={isSaving}
-              className="flex-1 px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 disabled:opacity-50 transition-colors font-medium flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 disabled:opacity-50 transition-colors font-medium"
             >
-              {isSaving && <Zap className="w-4 h-4 animate-spin" />}
-              {isSaving ? 'Creating...' : 'Create Customer'}
+              Create Customer
             </button>
           </div>
         </form>

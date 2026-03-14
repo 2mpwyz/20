@@ -508,17 +508,8 @@ export default function MilestoneProofOfWorkModal({
                 disabled={!selectedFile || !description.trim() || isSaving}
                 className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isSaving ? (
-                  <>
-                    <Loader className="w-4 h-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4" />
-                    Upload Photo & Complete Milestone
-                  </>
-                )}
+                <Upload className="w-4 h-4" />
+                Upload Photo & Complete Milestone
               </button>
             </>
           )}
@@ -575,17 +566,8 @@ export default function MilestoneProofOfWorkModal({
                 disabled={!selectedFile || !description.trim() || isSaving}
                 className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isSaving ? (
-                  <>
-                    <Loader className="w-4 h-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4" />
-                    Upload Document & Complete Milestone
-                  </>
-                )}
+                <Upload className="w-4 h-4" />
+                Upload Document & Complete Milestone
               </button>
             </>
           )}

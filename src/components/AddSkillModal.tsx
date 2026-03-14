@@ -97,17 +97,8 @@ export default function AddSkillModal({ isOpen, onClose, onAdd, isLoading = fals
               disabled={isLoading}
               className="flex-1 flex items-center justify-center gap-2 py-2 bg-gradient-to-r from-rose-500 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Adding...
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  Add Skill
-                </>
-              )}
+              <Plus className="w-4 h-4" />
+              Add Skill
             </button>
             <button
               type="button"
