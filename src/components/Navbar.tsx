@@ -26,15 +26,17 @@ export default function Navbar() {
         { path: '/contracts', label: 'Contracts' },
         { path: '/projects', label: 'Projects' },
         { path: '/company-profile', label: 'Profile' },
-        { path: '/directory', label: 'Directory' },
-        { path: '/supplies', label: 'Supplies' },
         { path: '/books', label: 'Books' },
+        // NOTE: Directory and Supplies are hidden from nav but routes remain intact for future use
+        // { path: '/directory', label: 'Directory' },
+        // { path: '/supplies', label: 'Supplies' },
       ];
     } else {
       return [
         { path: '/tenders', label: 'Opportunities' },
-        { path: '/directory', label: 'Providers' },
-        { path: '/supplies', label: 'Supplies' },
+        // NOTE: Providers (Directory) and Supplies are hidden from nav but routes remain intact for future use
+        // { path: '/directory', label: 'Providers' },
+        // { path: '/supplies', label: 'Supplies' },
       ];
     }
   };
